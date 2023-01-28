@@ -29,7 +29,7 @@
 };
 
 :do { :set previousIP [/file get [/file find name=($file)] contents] } on-error={
-	:log error message="OpenDNS: file $file does not exists.";
+	:log warning message="OpenDNS: file $file does not exists.";
 	/file print file=$file;
 	:delay 3;
 	/file set $file contents="";
@@ -38,7 +38,7 @@
 };
 
 :do { :set currentIP ([/tool fetch url=$ipDetectService1 output=user as-value]->"data") } on-error={
-	:log error message="OpenDNS: Service does not work: $ipDetectService1";
+	:log warning message="OpenDNS: Service does not work: $ipDetectService1";
 
 	# Second try in case the first one failed
 	:do { :set currentIP ([/tool fetch url=$ipDetectService2 output=user as-value]->"data") } on-error={
