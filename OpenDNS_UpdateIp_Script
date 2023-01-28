@@ -1,0 +1,66 @@
+# Set the hostname or label of network to be updated. This is the name of your OpenDNS network on the Dashboard. 
+# Note, you must have admin or edit (Read/Write/Grant in the OpenDNS Dashboard) to update IP addresses. 
+# Policy permission needed: ftp, read, write, test
+# Add your values into: odnsuser, odnspass, odnshost, inetinterface
+
+:log info message="START: OpenDNS Update"
+
+:local odnsuser "YOUR-OPENDNS-USERNAME";
+:local odnspass "YOUR-OPENDNS-TOKEN";
+:local odnshost "YOUR-OPENDNS-HOST-NAME";
+:local inetinterface "YOUR-MIKROTIK-INTERNET-INTERFACE-NAME";
+
+:local odnsurl "https://updates.opendns.com/nic/update\3Fhostname=$odnshost";
+:local file "mypublicip.txt";
+
+:local currentIP;
+:local previousIP;
+
+:local ipDetectService1 "https://api.ipify.org/";
+:local ipDetectService2 "https://ipv4.icanhazip.com/";
+
+:do { :set previousIP [/file get [/file find name=($file)] contents] } on-error={
+	:log warning message="OpenDNS: file $file does not exists.";
+	/file print file=$file;
+	:delay 3;
+	/file set $file contents="";
+	:set previousIP "";
+	:log info message="OpenDNS: file $file created as empty.";
+};
+
+:do { :set previousIP [/file get [/file find name=($file)] contents] } on-error={
+	:log error message="OpenDNS: file $file does not exists.";
+	/file print file=$file;
+	:delay 3;
+	/file set $file contents="";
+	:set previousIP "";
+	:log info message="OpenDNS: file $file created as empty.";
+};
+
+:do { :set currentIP ([/tool fetch url=$ipDetectService1 output=user as-value]->"data") } on-error={
+	:log error message="OpenDNS: Service does not work: $ipDetectService1";
+
+	# Second try in case the first one failed
+	:do { :set currentIP ([/tool fetch url=$ipDetectService2 output=user as-value]->"data") } on-error={
+		:log error message="OpenDNS: Service does not work: $ipDetectService2";
+	};
+};
+
+:if ($currentIP != $previousIP) do={
+    :log warning message="OpenDNS: Update needed, current IP ($currentIP) and previous IP ($previousIP)"
+
+    /file set mypublicip.txt contents="$currentIP"
+
+    :log info "OpenDNS: Sending update for $odnshost"
+
+    /tool fetch url=($odnsurl) user=$odnsuser password=$odnspass mode=http dst-path=("/net_odns.txt")
+
+    :delay 2;
+    :local odnsReply [/file get net_odns.txt contents];
+    :log info "OpenDNS: reply was $odnsReply";
+
+} else={
+    :log info "OpenDNS: Previous IP and current IP equal ($currentIP), no update need"
+}
+
+:log info message="END: OpenDNS Update"
