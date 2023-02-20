@@ -11,7 +11,8 @@
 :local inetinterface "YOUR-MIKROTIK-INTERNET-INTERFACE-NAME";
 
 :local odnsurl "https://updates.opendns.com/nic/update\3Fhostname=$odnshost";
-:local file "mypublicip.txt";
+:local ipFile "YOUR-FOLDER-OR-DIRVE-PATH/mypublicip.txt";
+:local responseFile "YOUR-FOLDER-OR-DIRVE-PATH/odns_response.txt";
 
 :local currentIP;
 :local previousIP;
@@ -19,23 +20,22 @@
 :local ipDetectService1 "https://api.ipify.org/";
 :local ipDetectService2 "https://ipv4.icanhazip.com/";
 
-:do { :set previousIP [/file get [/file find name=($file)] contents] } on-error={
-	:log warning message="OpenDNS: file $file does not exists.";
-	/file print file=$file;
+:do { :set previousIP [/file get [/file find name=($ipFile)] contents] } on-error={
+	:log warning message="OpenDNS: file $ipFile does not exists.";
+	/file print file=$ipFile;
 	:delay 3;
-	/file set $file contents="";
+	/file set $ipFile contents="";
 	:set previousIP "";
-	:log info message="OpenDNS: file $file created as empty.";
+	:log info message="OpenDNS: file $ipFile created as empty.";
 };
 
-:do { :set previousIP [/file get [/file find name=($file)] contents] } on-error={
-	:log warning message="OpenDNS: file $file does not exists.";
-	/file print file=$file;
+:do { [/file get [/file find name=($responseFile)] contents] } on-error={
+	:log warning message="OpenDNS: file $responseFile does not exists.";
+	/file print file=$responseFile;
 	:delay 3;
-	/file set $file contents="";
-	:set previousIP "";
-	:log info message="OpenDNS: file $file created as empty.";
-};
+	/file set $responseFile contents="";
+	:log info message="OpenDNS: file $responseFile created as empty.";
+}
 
 :do { :set currentIP ([/tool fetch url=$ipDetectService1 output=user as-value]->"data") } on-error={
 	:log warning message="OpenDNS: Service does not work: $ipDetectService1";
@@ -47,20 +47,20 @@
 };
 
 :if ($currentIP != $previousIP) do={
-    :log warning message="OpenDNS: Update needed, current IP ($currentIP) and previous IP ($previousIP)"
+    :log warning message="OpenDNS: Update needed, current IP ($currentIP) and previous IP ($previousIP)";
 
-    /file set mypublicip.txt contents="$currentIP"
+    /file set $ipFile contents="$currentIP";
 
-    :log info "OpenDNS: Sending update for $odnshost"
+    :log info "OpenDNS: Sending update for $odnshost";
 
-    /tool fetch url=($odnsurl) user=$odnsuser password=$odnspass mode=http dst-path=("/net_odns.txt")
+    /tool fetch url=($odnsurl) user=$odnsuser password=$odnspass mode=http dst-path=($responseFile);
 
-    :delay 2;
-    :local odnsReply [/file get net_odns.txt contents];
+    :delay 5;
+    :local odnsReply [/file get $responseFile contents];
     :log info "OpenDNS: reply was $odnsReply";
 
 } else={
-    :log info "OpenDNS: Previous IP and current IP equal ($currentIP), no update need"
+    :log info "OpenDNS: Previous IP and current IP equal ($currentIP), no update need";
 }
 
-:log info message="END: OpenDNS Update"
+:log info message="END: OpenDNS Update";
