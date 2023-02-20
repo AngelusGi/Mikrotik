@@ -8,7 +8,7 @@
 :local odnsuser "YOUR-OPENDNS-USERNAME";
 :local odnspass "YOUR-OPENDNS-TOKEN";
 :local odnshost "YOUR-OPENDNS-HOST-NAME";
-:local inetinterface "YOUR-MIKROTIK-INTERNET-INTERFACE-NAME";
+:local inetinterface "YOUR-WAN-INTERFACE-NAME";
 
 :local odnsurl "https://updates.opendns.com/nic/update\3Fhostname=$odnshost";
 :local ipFile "YOUR-FOLDER-OR-DIRVE-PATH/mypublicip.txt";
